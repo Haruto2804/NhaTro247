@@ -57,12 +57,12 @@ export const InvoiceDetailPage = () => {
       const res = await api.get(`/invoices/${id}`);
       setInvoice(res.data.invoice);
       setAdjustData({
-        newElectricityIndex: res.data.invoice.readings.electricity.newIndex,
-        newWaterIndex: res.data.invoice.readings.water.newIndex,
+        newElectricityIndex: res.data.invoice.readings?.electricity?.newIndex ?? '',
+        newWaterIndex: res.data.invoice.readings?.water?.newIndex ?? '',
         landlordResponse: '',
       });
     } catch (err) {
-      setError(err.response?.data?.message || 'Không tìm thấy hóa đơn.');
+      setError(err.response?.data?.message || 'Không tìm thấy hóa đơn hoặc phiên đăng nhập đã hết hạn.');
     } finally {
       setLoading(false);
     }
@@ -177,6 +177,8 @@ export const InvoiceDetailPage = () => {
 
   const room = invoice.roomId || invoice.room || {};
   const readings = invoice.readings || {};
+  const elec = readings.electricity || {};
+  const water = readings.water || {};
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
@@ -241,10 +243,10 @@ export const InvoiceDetailPage = () => {
               <div>
                 <h3 className="font-bold text-red-900 text-base">Khách Thuê Đã Báo Sai Lệch Chỉ Số!</h3>
                 <p className="text-red-700 text-xs sm:text-sm mt-0.5">
-                  Lý do phản ánh: <span className="font-semibold text-red-900">"{invoice.dispute?.tenantReason}"</span>
+                  Lý do phản ánh: <span className="font-semibold text-red-900">"{invoice.dispute?.tenantReason || 'Không có lý do chi tiết'}"</span>
                 </p>
                 <span className="text-[11px] text-red-500 mt-1 block">
-                  Thời điểm báo: {new Date(invoice.dispute?.disputedAt).toLocaleString('vi-VN')}
+                  Thời điểm báo: {invoice.dispute?.disputedAt ? new Date(invoice.dispute.disputedAt).toLocaleString('vi-VN') : 'Mới đây'}
                 </span>
               </div>
             </div>
@@ -325,39 +327,39 @@ export const InvoiceDetailPage = () => {
                 <div className="p-1.5 rounded-lg bg-blue-100 text-blue-600"><Zap className="w-4 h-4" /></div>
                 <h3 className="font-bold text-slate-800 text-sm">Điện Sinh Hoạt</h3>
               </div>
-              <span className="text-xs text-slate-500">Đơn giá: <b>{readings.electricity.unitPrice?.toLocaleString()}đ</b> / kWh</span>
+              <span className="text-xs text-slate-500">Đơn giá: <b>{elec.unitPrice ? Number(elec.unitPrice).toLocaleString() : '3.500'}đ</b> / kWh</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-center text-xs">
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                 <div className="text-slate-400">Số cũ</div>
-                <div className="font-bold text-slate-700 text-sm mt-1">{readings.electricity.oldIndex}</div>
+                <div className="font-bold text-slate-700 text-sm mt-1">{elec.oldIndex ?? 0}</div>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                 <div className="text-slate-400">Số mới</div>
-                <div className="font-bold text-blue-600 text-sm mt-1">{readings.electricity.newIndex}</div>
+                <div className="font-bold text-blue-600 text-sm mt-1">{elec.newIndex ?? 0}</div>
               </div>
               <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
                 <div className="text-blue-500">Tiêu thụ</div>
-                <div className="font-bold text-blue-700 text-sm mt-1">{readings.electricity.consumption} kWh</div>
+                <div className="font-bold text-blue-700 text-sm mt-1">{elec.consumption ?? 0} kWh</div>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                 <div className="text-slate-400">Thành tiền điện</div>
-                <div className="font-bold text-slate-800 text-sm mt-1">{formatVND(readings.electricity.amount)}</div>
+                <div className="font-bold text-slate-800 text-sm mt-1">{formatVND(elec.amount)}</div>
               </div>
             </div>
 
             {/* Ảnh công tơ điện */}
-            {readings.electricity.meterPhoto && (
+            {elec.meterPhoto && (
               <div className="flex items-center gap-3 pt-1">
                 <div
                   onClick={() => {
-                    setZoomPhoto(readings.electricity.meterPhoto);
+                    setZoomPhoto(elec.meterPhoto);
                     setZoomTitle('Ảnh chụp công tơ điện gốc của chủ trọ');
                   }}
                   className="relative group w-16 h-16 rounded-xl overflow-hidden border border-slate-300 cursor-pointer shadow-sm"
                 >
-                  <img src={getFullImg(readings.electricity.meterPhoto)} alt="Ảnh đồng hồ điện" className="w-full h-full object-cover" />
+                  <img src={getFullImg(elec.meterPhoto)} alt="Ảnh đồng hồ điện" className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                     <ZoomIn className="w-4 h-4" />
                   </div>
@@ -379,39 +381,39 @@ export const InvoiceDetailPage = () => {
                 <div className="p-1.5 rounded-lg bg-cyan-100 text-cyan-600"><Droplet className="w-4 h-4" /></div>
                 <h3 className="font-bold text-slate-800 text-sm">Nước Sinh Hoạt</h3>
               </div>
-              <span className="text-xs text-slate-500">Đơn giá: <b>{readings.water.unitPrice?.toLocaleString()}đ</b> / m³</span>
+              <span className="text-xs text-slate-500">Đơn giá: <b>{water.unitPrice ? Number(water.unitPrice).toLocaleString() : '25.000'}đ</b> / m³</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-center text-xs">
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                 <div className="text-slate-400">Số cũ</div>
-                <div className="font-bold text-slate-700 text-sm mt-1">{readings.water.oldIndex}</div>
+                <div className="font-bold text-slate-700 text-sm mt-1">{water.oldIndex ?? 0}</div>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                 <div className="text-slate-400">Số mới</div>
-                <div className="font-bold text-cyan-600 text-sm mt-1">{readings.water.newIndex}</div>
+                <div className="font-bold text-cyan-600 text-sm mt-1">{water.newIndex ?? 0}</div>
               </div>
               <div className="p-3 bg-cyan-50 rounded-xl border border-cyan-100">
                 <div className="text-cyan-600">Tiêu thụ</div>
-                <div className="font-bold text-cyan-800 text-sm mt-1">{readings.water.consumption} m³</div>
+                <div className="font-bold text-cyan-800 text-sm mt-1">{water.consumption ?? 0} m³</div>
               </div>
               <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                 <div className="text-slate-400">Thành tiền nước</div>
-                <div className="font-bold text-slate-800 text-sm mt-1">{formatVND(readings.water.amount)}</div>
+                <div className="font-bold text-slate-800 text-sm mt-1">{formatVND(water.amount)}</div>
               </div>
             </div>
 
             {/* Ảnh công tơ nước */}
-            {readings.water.meterPhoto && (
+            {water.meterPhoto && (
               <div className="flex items-center gap-3 pt-1">
                 <div
                   onClick={() => {
-                    setZoomPhoto(readings.water.meterPhoto);
+                    setZoomPhoto(water.meterPhoto);
                     setZoomTitle('Ảnh chụp công tơ nước gốc của chủ trọ');
                   }}
                   className="relative group w-16 h-16 rounded-xl overflow-hidden border border-slate-300 cursor-pointer shadow-sm"
                 >
-                  <img src={getFullImg(readings.water.meterPhoto)} alt="Ảnh đồng hồ nước" className="w-full h-full object-cover" />
+                  <img src={getFullImg(water.meterPhoto)} alt="Ảnh đồng hồ nước" className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
                     <ZoomIn className="w-4 h-4" />
                   </div>
@@ -438,7 +440,7 @@ export const InvoiceDetailPage = () => {
               {invoice.status === 3 ? (
                 <div className="flex items-center gap-2 text-emerald-700 text-sm font-semibold">
                   <CheckCircle2 className="w-5 h-5" />
-                  <span>Đã nhận thanh toán & Khóa sổ vào: {new Date(invoice.payment?.paidAt).toLocaleString('vi-VN')}</span>
+                  <span>Đã nhận thanh toán & Khóa sổ{invoice.payment?.paidAt ? ` vào: ${new Date(invoice.payment.paidAt).toLocaleString('vi-VN')}` : ''}</span>
                 </div>
               ) : (
                 <span className="text-xs text-slate-500">
@@ -470,7 +472,7 @@ export const InvoiceDetailPage = () => {
       >
         <form onSubmit={handleAdjustSubmit} className="space-y-4 text-sm">
           <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-800">
-            Khách phản ánh: "{invoice.dispute?.tenantReason}"
+            Khách phản ánh: "{invoice.dispute?.tenantReason || 'Không có mô tả'}"
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -479,7 +481,7 @@ export const InvoiceDetailPage = () => {
               <input
                 type="number"
                 required
-                min={invoice.readings.electricity.oldIndex}
+                min={elec.oldIndex ?? 0}
                 value={adjustData.newElectricityIndex}
                 onChange={(e) => setAdjustData({ ...adjustData, newElectricityIndex: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm font-bold"
@@ -490,7 +492,7 @@ export const InvoiceDetailPage = () => {
               <input
                 type="number"
                 required
-                min={invoice.readings.water.oldIndex}
+                min={water.oldIndex ?? 0}
                 value={adjustData.newWaterIndex}
                 onChange={(e) => setAdjustData({ ...adjustData, newWaterIndex: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm font-bold"

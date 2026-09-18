@@ -158,7 +158,11 @@ export const TenantBillPage = () => {
     );
   }
 
-  const { readings, roomId: room, landlordId: landlord } = invoice;
+  const room = invoice.roomId || invoice.room || {};
+  const landlord = invoice.landlordId || invoice.landlord || {};
+  const readings = invoice.readings || {};
+  const elec = readings.electricity || {};
+  const water = readings.water || {};
   const isPaid = invoice.status === 3;
   const isDisputed = invoice.status === 2;
 
@@ -223,7 +227,7 @@ export const TenantBillPage = () => {
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div>
                 <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Kỳ thanh toán</span>
-                <h2 className="text-xl font-bold text-slate-900">Tháng {invoice.monthYear.replace('-', '/')}</h2>
+                <h2 className="text-xl font-bold text-slate-900">Tháng {invoice.monthYear ? invoice.monthYear.replace('-', '/') : ''}</h2>
               </div>
               <div className="text-right">
                 <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">Phòng</span>
@@ -245,36 +249,36 @@ export const TenantBillPage = () => {
               <Zap className="w-4 h-4 text-blue-600" />
               <span className="font-bold text-slate-800 text-sm">Điện Sinh Hoạt</span>
             </div>
-            <span className="text-xs text-slate-500 font-medium">Đơn giá: {readings.electricity.unitPrice?.toLocaleString()}đ</span>
+            <span className="text-xs text-slate-500 font-medium">Đơn giá: {elec.unitPrice ? Number(elec.unitPrice).toLocaleString() : '3.500'}đ</span>
           </CardHeader>
           <CardBody className="p-4 space-y-3">
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
               <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
                 <div className="text-slate-400 text-[11px]">Số cũ</div>
-                <div className="font-bold text-slate-700 text-sm mt-0.5">{readings.electricity.oldIndex}</div>
+                <div className="font-bold text-slate-700 text-sm mt-0.5">{elec.oldIndex ?? 0}</div>
               </div>
               <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
                 <div className="text-slate-400 text-[11px]">Số mới chốt</div>
-                <div className="font-bold text-blue-600 text-sm mt-0.5">{readings.electricity.newIndex}</div>
+                <div className="font-bold text-blue-600 text-sm mt-0.5">{elec.newIndex ?? 0}</div>
               </div>
               <div className="p-2.5 rounded-xl bg-blue-50 border border-blue-100">
                 <div className="text-blue-500 text-[11px]">Tiêu thụ</div>
-                <div className="font-bold text-blue-700 text-sm mt-0.5">{readings.electricity.consumption} kWh</div>
+                <div className="font-bold text-blue-700 text-sm mt-0.5">{elec.consumption ?? 0} kWh</div>
               </div>
             </div>
 
             {/* Ảnh chụp công tơ điện */}
-            {readings.electricity.meterPhoto && (
+            {elec.meterPhoto && (
               <div
                 onClick={() => {
-                  setZoomPhoto(readings.electricity.meterPhoto);
+                  setZoomPhoto(elec.meterPhoto);
                   setZoomTitle('Ảnh đồng hồ điện chủ trọ chụp');
                 }}
                 className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200 cursor-pointer transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <img
-                    src={getFullImg(readings.electricity.meterPhoto)}
+                    src={getFullImg(elec.meterPhoto)}
                     alt="Đồng hồ điện"
                     className="w-12 h-12 rounded-lg object-cover border border-slate-300 shadow-xs"
                   />
@@ -289,7 +293,7 @@ export const TenantBillPage = () => {
 
             <div className="flex justify-between items-center text-xs pt-1">
               <span className="text-slate-500">Thành tiền điện:</span>
-              <span className="font-bold text-slate-800 text-sm">{formatVND(readings.electricity.amount)}</span>
+              <span className="font-bold text-slate-800 text-sm">{formatVND(elec.amount)}</span>
             </div>
           </CardBody>
         </Card>
@@ -301,36 +305,36 @@ export const TenantBillPage = () => {
               <Droplet className="w-4 h-4 text-cyan-600" />
               <span className="font-bold text-slate-800 text-sm">Nước Sinh Hoạt</span>
             </div>
-            <span className="text-xs text-slate-500 font-medium">Đơn giá: {readings.water.unitPrice?.toLocaleString()}đ</span>
+            <span className="text-xs text-slate-500 font-medium">Đơn giá: {water.unitPrice ? Number(water.unitPrice).toLocaleString() : '25.000'}đ</span>
           </CardHeader>
           <CardBody className="p-4 space-y-3">
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
               <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
                 <div className="text-slate-400 text-[11px]">Số cũ</div>
-                <div className="font-bold text-slate-700 text-sm mt-0.5">{readings.water.oldIndex}</div>
+                <div className="font-bold text-slate-700 text-sm mt-0.5">{water.oldIndex ?? 0}</div>
               </div>
               <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
                 <div className="text-slate-400 text-[11px]">Số mới chốt</div>
-                <div className="font-bold text-cyan-600 text-sm mt-0.5">{readings.water.newIndex}</div>
+                <div className="font-bold text-cyan-600 text-sm mt-0.5">{water.newIndex ?? 0}</div>
               </div>
               <div className="p-2.5 rounded-xl bg-cyan-50 border border-cyan-100">
                 <div className="text-cyan-600 text-[11px]">Tiêu thụ</div>
-                <div className="font-bold text-cyan-800 text-sm mt-0.5">{readings.water.consumption} m³</div>
+                <div className="font-bold text-cyan-800 text-sm mt-0.5">{water.consumption ?? 0} m³</div>
               </div>
             </div>
 
             {/* Ảnh chụp công tơ nước */}
-            {readings.water.meterPhoto && (
+            {water.meterPhoto && (
               <div
                 onClick={() => {
-                  setZoomPhoto(readings.water.meterPhoto);
+                  setZoomPhoto(water.meterPhoto);
                   setZoomTitle('Ảnh đồng hồ nước chủ trọ chụp');
                 }}
                 className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200 cursor-pointer transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <img
-                    src={getFullImg(readings.water.meterPhoto)}
+                    src={getFullImg(water.meterPhoto)}
                     alt="Đồng hồ nước"
                     className="w-12 h-12 rounded-lg object-cover border border-slate-300 shadow-xs"
                   />
@@ -345,7 +349,7 @@ export const TenantBillPage = () => {
 
             <div className="flex justify-between items-center text-xs pt-1">
               <span className="text-slate-500">Thành tiền nước:</span>
-              <span className="font-bold text-slate-800 text-sm">{formatVND(readings.water.amount)}</span>
+              <span className="font-bold text-slate-800 text-sm">{formatVND(water.amount)}</span>
             </div>
           </CardBody>
         </Card>
