@@ -47,9 +47,10 @@ export const InvoiceDetailPage = () => {
   });
   const [adjustSubmitting, setAdjustSubmitting] = useState(false);
 
-  // Trạng thái copy
+  // Trạng thái copy & Zalo
   const [copied, setCopied] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [zaloStatus, setZaloStatus] = useState('');
 
   const fetchInvoice = async () => {
     try {
