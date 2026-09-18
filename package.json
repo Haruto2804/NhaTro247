@@ -5,7 +5,9 @@
   "scripts": {
     "server": "cd server && node index.js",
     "client": "cd client && npm run dev",
-    "build": "cd client && npm run build"
+    "build": "cd client && npm run build",
+    "test": "node --test server/test/qa_system.test.mjs",
+    "lint": "cd client && npm run lint"
   },
   "keywords": [
     "quan-ly-nha-tro",
