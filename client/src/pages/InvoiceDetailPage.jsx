@@ -21,8 +21,10 @@ import {
   Building2,
   Phone,
   User,
-  QrCode
+  QrCode,
+  MessageCircle
 } from 'lucide-react';
+import { quickSendZalo } from '../utils/zalo';
 
 export const InvoiceDetailPage = () => {
   const { id } = useParams();
@@ -78,6 +80,41 @@ export const InvoiceDetailPage = () => {
     setTimeout(() => setCopied(false), 2500);
   };
 
+  // Gửi Zalo 1-chạm theo số điện thoại khách thuê
+  const handleZaloSend = async () => {
+    if (!invoice?.token) return;
+    const res = await quickSendZalo({
+      phone: invoice.room?.tenantPhone,
+      roomName: `${invoice.room?.roomCode} - ${invoice.room?.name}`,
+      tenantName: invoice.room?.tenantName,
+      monthYear: invoice.monthYear,
+      roomFee: invoice.roomFee,
+      elecInfo: {
+        oldIndex: invoice.readings?.electricity?.oldIndex,
+        newIndex: invoice.readings?.electricity?.newIndex,
+        consumption: invoice.readings?.electricity?.consumption,
+        amount: invoice.readings?.electricity?.amount,
+        unitPrice: invoice.readings?.electricity?.unitPrice,
+      },
+      waterInfo: {
+        oldIndex: invoice.readings?.water?.oldIndex,
+        newIndex: invoice.readings?.water?.newIndex,
+        consumption: invoice.readings?.water?.consumption,
+        amount: invoice.readings?.water?.amount,
+        unitPrice: invoice.readings?.water?.unitPrice,
+      },
+      serviceFee: invoice.serviceFee,
+      totalAmount: invoice.totalAmount,
+      token: invoice.token,
+    });
+    setZaloStatus(res.message);
+    setCopied(true);
+    setTimeout(() => {
+      setCopied(false);
+      setZaloStatus('');
+    }, 5000);
+  };
+
   // Duyệt thanh toán & khóa sổ
   const handleMarkAsPaid = async () => {
     if (!window.confirm('Xác nhận bạn đã nhận được tiền và muốn đóng công nợ kỳ này? Thao tác này sẽ khóa hóa đơn chống chỉnh sửa.')) {
@@ -107,7 +144,7 @@ export const InvoiceDetailPage = () => {
       });
       setIsAdjustModalOpen(false);
       await fetchInvoice();
-      alert('Điều chỉnh số đo thành công! Hóa đơn đã được cập nhật.');
+      alert('Đã điều chỉnh chỉ số thành công!');
     } catch (err) {
       alert('Lỗi điều chỉnh: ' + (err.response?.data?.message || err.message));
     } finally {
@@ -117,20 +154,30 @@ export const InvoiceDetailPage = () => {
 
   const formatVND = (num) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num || 0);
 
-  const getFullImg = (url) => {
-    if (!url) return '';
-    if (url.startsWith('http')) return url;
+  const getFullImg = (path) => {
+    if (!path) return '';
+    if (path.startsWith('http')) return path;
     const base = import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace('/api', '') : 'http://localhost:5000';
-    return `${base}${url}`;
+    return `${base}${path}`;
   };
 
-  if (loading) return <div className="p-12 text-center text-slate-400">Đang tải chi tiết hóa đơn...</div>;
-  if (error || !invoice) return <div className="p-12 text-center text-red-600">{error || 'Không tìm thấy hóa đơn.'}</div>;
+  if (loading) {
+    return <div className="p-12 text-center text-slate-400 text-sm">Đang tải chi tiết hóa đơn...</div>;
+  }
 
-  const { readings, roomId: room } = invoice;
+  if (error || !invoice) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-12 text-center space-y-4">
+        <p className="text-red-600 font-medium">{error || 'Không tìm thấy hóa đơn.'}</p>
+        <Button onClick={() => navigate('/dashboard')}>Về Bảng điều khiển</Button>
+      </div>
+    );
+  }
+
+  const { room, readings } = invoice;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Top action bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <button
@@ -141,11 +188,23 @@ export const InvoiceDetailPage = () => {
           Quay lại Bảng điều khiển
         </button>
 
-        <div className="flex items-center gap-2">
-          {/* Nút Copy link Zalo */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Nút Gửi Zalo 1-chạm theo SĐT */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleZaloSend}
+            className="text-xs bg-[#0068FF]/10 text-[#0068FF] border-[#0068FF]/30 hover:bg-[#0068FF]/20 font-semibold"
+            title="Tự động copy hóa đơn và mở Zalo với khách"
+          >
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <MessageCircle className="w-3.5 h-3.5 text-[#0068FF]" />}
+            <span>{copied ? 'Đã copy & Mở Zalo!' : 'Gửi Zalo (SĐT)'}</span>
+          </Button>
+
+          {/* Nút Copy link */}
           <Button variant="outline" size="sm" onClick={copyTenantLink} className="text-xs">
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copied ? 'Đã sao chép link Zalo!' : 'Sao chép link Zalo'}</span>
+            <Copy className="w-3.5 h-3.5" />
+            <span>Sao chép link</span>
           </Button>
 
           {/* Mở xem với tư cách người thuê */}
@@ -160,6 +219,14 @@ export const InvoiceDetailPage = () => {
           </a>
         </div>
       </div>
+
+      {/* Thông báo trạng thái gửi Zalo */}
+      {zaloStatus && (
+        <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs flex items-center gap-2">
+          <MessageCircle className="w-4 h-4 text-[#0068FF] shrink-0" />
+          <span>{zaloStatus}</span>
+        </div>
+      )}
 
       {/* CẢNH BÁO KHIẾU NẠI (STATUS 2) */}
       {invoice.status === 2 && (

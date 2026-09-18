@@ -17,8 +17,10 @@ import {
   Zap,
   Check,
   Building2,
-  Users
+  Users,
+  MessageCircle
 } from 'lucide-react';
+import { quickSendZalo } from '../utils/zalo';
 
 export const DashboardPage = () => {
   const { user } = useAuth();
@@ -52,6 +54,22 @@ export const DashboardPage = () => {
   useEffect(() => {
     fetchDashboard();
   }, [monthYear]);
+
+  // Gửi hóa đơn nhanh qua Zalo theo SĐT khách
+  const handleZaloSend = async (room) => {
+    if (!room.invoiceToken) return;
+    await quickSendZalo({
+      phone: room.tenantPhone,
+      roomName: `${room.roomCode} (${room.roomName})`,
+      tenantName: room.tenantName,
+      monthYear: monthYear.replace('-', '/'),
+      roomFee: room.basePrice,
+      totalAmount: room.totalAmount,
+      token: room.invoiceToken,
+    });
+    setCopiedId(room.invoiceId);
+    setTimeout(() => setCopiedId(null), 3000);
+  };
 
   // Sao chép liên kết hóa đơn gửi Zalo
   const copyInvoiceLink = (token, id) => {
@@ -335,24 +353,24 @@ export const DashboardPage = () => {
                                 </Button>
                               </Link>
 
-                              {/* Copy Link Zalo */}
+                              {/* Gửi Zalo 1-chạm theo SĐT */}
                               {r.invoiceToken && (
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  onClick={() => copyInvoiceLink(r.invoiceToken, r.invoiceId)}
-                                  title="Sao chép liên kết gửi Zalo"
-                                  className="text-xs text-blue-600 hover:bg-blue-50"
+                                  onClick={() => handleZaloSend(r)}
+                                  title="Tự động copy hóa đơn và mở Zalo theo SĐT khách"
+                                  className="text-xs text-[#0068FF] hover:bg-blue-50 font-medium"
                                 >
                                   {copiedId === r.invoiceId ? (
                                     <>
                                       <Check className="w-3.5 h-3.5 text-emerald-600" />
-                                      <span className="text-emerald-600">Đã chép link!</span>
+                                      <span className="text-emerald-600">Đã mở Zalo!</span>
                                     </>
                                   ) : (
                                     <>
-                                      <Copy className="w-3.5 h-3.5" />
-                                      <span>Link Zalo</span>
+                                      <MessageCircle className="w-3.5 h-3.5" />
+                                      <span>Gửi Zalo</span>
                                     </>
                                   )}
                                 </Button>
