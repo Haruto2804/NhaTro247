@@ -55,16 +55,25 @@
   - `2`: Khách khiếu nại (Khách báo sai lệch chỉ số kèm ảnh đối chứng)
   - `3`: Đã thanh toán (Chủ trọ đã nhận tiền & khóa sổ công nợ)
 
-#### Phân hệ 4: Đối soát hai chiều (Two-way Verification & Dispute Resolution)
-- Cơ chế sinh liên kết tra cứu hóa đơn kèm token định danh duy nhất cho từng phòng.
-- Giao diện người thuê hiển thị chi tiết: Chỉ số cũ, chỉ số mới, mức tiêu thụ, đơn giá, ảnh chụp công tơ gốc của chủ trọ.
-- **2 hành động của người thuê:**
-  1. **"Xác nhận đúng":** Chuyển trạng thái hóa đơn sang sẵn sàng thanh toán.
-  2. **"Báo sai lệch chỉ số":** Nhập ghi chú lý do sai lệch và bắt buộc tải ảnh chụp công tơ thực tế của khách đối chứng.
-- Khi có khiếu nại (`DISPUTED`):
-  - Chủ trọ nhận thông báo cảnh báo phòng có sai lệch.
-  - Chủ trọ vào xem ảnh đối chứng của khách, kiểm tra lại đồng hồ vật lý.
-  - Cho phép chủ trọ cập nhật lại chỉ số chuẩn và hệ thống tự động tái lập hóa đơn.
+#### Phân hệ 4: Đối soát hai chiều & Kênh phân phối Zalo (Two-way Verification & Zalo Distribution)
+- **Cơ chế sinh liên kết tra cứu an toàn:** Mỗi hóa đơn sau khi chốt số tự động sinh mã Token ngẫu nhiên (UUID v4), tạo đường link duy nhất `/bill/:token` không chứa ID tuần tự, ngăn chặn việc dò tìm hóa đơn phòng khác.
+- **Quy trình Nghiệp vụ Gửi Hóa đơn qua Zalo theo SĐT (Zalo Quick-Send):**
+  - **User Story:** Là một Chủ trọ, sau khi chốt số tiền phòng, tôi muốn gửi hóa đơn ngay cho khách thuê qua Zalo chỉ bằng một chạm theo đúng số điện thoại của họ mà không phải gõ lại số liệu hay tìm kiếm danh bạ thủ công, nhằm tiết kiệm thời gian và tránh gửi nhầm số tiền hoặc nhầm phòng.
+  - **Quy tắc nghiệp vụ (Business Rules):**
+    1. *Chuẩn hóa SĐT:* Hệ thống tự động làm sạch ký tự phân cách (khoảng trắng, dấu chấm, dấu gạch ngang) và định dạng về đầu số điện thoại Việt Nam chuẩn (`09xx`, `08xx`, `07xx`, `03xx`, `05xx`).
+    2. *Mẫu tin chuẩn hóa:* Bản tin chứa đầy đủ các thành phần minh bạch (Tiền phòng, Chỉ số điện cũ -> mới & thành tiền, Chỉ số nước cũ -> mới & thành tiền, Dịch vụ, Tổng cộng, và Link tra cứu kèm ảnh công tơ gốc).
+    3. *Tương thích đa nền tảng:* Hỗ trợ mở qua Zalo App (iOS/Android) hoặc Zalo Web / Zalo PC thông qua Deep Link `https://zalo.me/{phone}`.
+    4. *Tự động hóa Clipboard:* Tự động sao chép toàn văn thông điệp hóa đơn vào bộ nhớ đệm (Clipboard API) đồng thời khi mở Zalo, chủ trọ chỉ cần thực hiện thao tác Dán (Paste) và Gửi.
+    5. *Cơ chế dự phòng (Fallback):* Nếu phòng chưa có SĐT hoặc khách không dùng Zalo, hệ thống cung cấp nút "Sao chép link & nội dung" để chủ trọ gửi qua SMS hoặc Messenger.
+- **Giao diện Người thuê (Mobile Tenant View):**
+  - Hiển thị chi tiết: Bảng kê chi phí, chỉ số cũ/mới, mức tiêu thụ, đơn giá, ảnh chụp công tơ gốc độ phân giải cao của chủ trọ (cho phép chạm phóng to kiểm tra).
+  - **2 hành động đối soát của người thuê:**
+    1. **"Xác nhận đúng":** Khách đồng ý với chỉ số, chuyển xuống khu vực thanh toán VietQR.
+    2. **"Báo sai lệch chỉ số":** Khách phát hiện số đo sai lệch, nhập mô tả lý do và bắt buộc tải lên ảnh chụp thực tế công tơ của khách làm căn cứ đối chứng. Trạng thái hóa đơn chuyển thành `2 - Khách khiếu nại`.
+- **Quy trình Xử lý Khiếu nại (Dispute Resolution):**
+  - Dashboard chủ trọ cảnh báo thẻ phòng màu đỏ (Trạng thái `2`).
+  - Màn hình quản trị hiển thị song song (Side-by-side) ảnh công tơ gốc của chủ trọ và ảnh đối chứng của khách thuê.
+  - Chủ trọ có quyền điều chỉnh lại chỉ số đúng; hệ thống tức thời tính toán lại số tiền và chuyển về trạng thái `1 - Đã gửi hóa đơn` để khách tiếp tục đối soát và thanh toán.
 
 #### Phân hệ 5: Thanh toán nhanh qua VietQR & Khóa sổ công nợ
 - Tích hợp chuẩn mã VietQR mở (NAPAS 247):

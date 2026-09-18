@@ -80,3 +80,5 @@
 - **18/09/2026 10:28:** Hoàn thành Giai đoạn 1 (Khởi tạo dự án server/client) và Giai đoạn 2 (Xây dựng toàn bộ Backend models, middlewares, routes, controllers).
 - **18/09/2026 10:30:** Hoàn thành Giai đoạn 3 & 4 (Phát triển toàn diện giao diện Frontend cho Chủ trọ và Người thuê).
 - **18/09/2026 10:32:** Hoàn thành Giai đoạn 5 (Kiểm thử, tài liệu hóa README.md, walkthrough.md và đồng bộ hoàn tất lên GitHub).
+- **18/09/2026 10:48:** Bổ sung đặc tả quy trình nghiệp vụ "Gửi Hóa đơn qua Zalo theo Số điện thoại khách thuê (Zalo Quick-Send)" với sơ đồ Sequence Diagram, kịch bản 1-chạm, chuẩn hóa SĐT, tự động hóa Clipboard và cơ chế dự phòng Fallback vào các tài liệu: [AppFlow.md](file:///c:/Users/ngohi/OneDrive/Documents/PhongTro/AppFlow.md), [PRD.md](file:///c:/Users/ngohi/OneDrive/Documents/PhongTro/PRD.md), [TechSpec.md](file:///c:/Users/ngohi/OneDrive/Documents/PhongTro/TechSpec.md) và [README.md](file:///c:/Users/ngohi/OneDrive/Documents/PhongTro/README.md).
+

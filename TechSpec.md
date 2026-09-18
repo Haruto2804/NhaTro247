@@ -70,6 +70,27 @@
   `https://img.vietqr.io/image/{bankCode}-{accountNumber}-compact2.png?amount={amount}&addInfo={description}`
   - Hoàn toàn miễn phí, không cần đăng ký cổng thanh toán doanh nghiệp, chuyển khoản P2P trực tiếp về tài khoản chủ trọ.
 
+#### Kỹ thuật Tích hợp Gửi Zalo theo SĐT (Zalo Quick-Send Specification)
+- **Cơ chế Deep Link:** `https://zalo.me/{cleanPhone}`.
+  - Trên thiết bị di động (iOS/Android): Kích hoạt Universal Links / App Links mở thẳng ứng dụng Zalo đã cài đặt, đưa con trỏ vào khung hội thoại với người nhận theo SĐT.
+  - Trên máy tính (Desktop): Mở giao diện Zalo Web hoặc hiển thị gợi ý mở ứng dụng Zalo PC.
+- **Thuật toán Chuẩn hóa Số điện thoại (Phone Normalization Algorithm):**
+  ```javascript
+  function normalizeVietnamesePhone(phone) {
+    if (!phone) return '';
+    let cleaned = phone.toString().trim().replace(/[\s.\-()]/g, '');
+    if (cleaned.startsWith('+84')) cleaned = '0' + cleaned.slice(3);
+    else if (cleaned.startsWith('84')) cleaned = '0' + cleaned.slice(2);
+    return cleaned;
+  }
+  ```
+- **Xử lý Bộ nhớ đệm (Clipboard Automation):**
+  - Sử dụng API bất đồng bộ hiện đại `navigator.clipboard.writeText(formattedMessage)`.
+  - Fallback an toàn cho trình duyệt cũ bằng `document.execCommand('copy')` thông qua textarea ẩn nếu Clipboard API bị từ chối quyền.
+- **Chiến lược mở rộng cấp Doanh nghiệp (Enterprise Scalability):**
+  - Mô hình hiện tại (Zalo Quick-Send Deep Link): Chi phí 0 VNĐ, không yêu cầu GPKD, không cần đăng ký Zalo OA tích vàng, vận hành tức thì 100% cho mọi quy mô nhà trọ.
+  - Lộ trình nâng cấp Enterprise: Khi mở rộng quy mô thành chuỗi căn hộ dịch vụ có tư cách pháp nhân, hệ thống hỗ trợ tích hợp Zalo Notification Service (ZNS API) thông qua access token của Zalo OA để gửi tin nhắn thông báo tự động (Automated Background Messaging) có webhook nhận diện trạng thái xem tin (`DELIVERED`, `READ`).
+
 ---
 
 ### 3. Thiết kế luồng dữ liệu & Bảo mật (Security & Data Flow)

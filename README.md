@@ -19,6 +19,8 @@ Thay vì làm dàn trải các tính năng CRUD quản lý chung, hệ thống t
    - `1` - **Đã gửi hóa đơn** (Chờ khách đối soát)
    - `2` - **Khách khiếu nại** (Cảnh báo bất đồng chỉ số)
    - `3` - **Đã thanh toán** (Khóa sổ hoàn tất kỳ)
+5. **Phân phối hóa đơn 1-chạm qua Zalo theo SĐT:** Tự động định dạng số điện thoại người thuê, soạn thảo bản tin tổng hợp chi tiết, tự động nạp vào bộ nhớ tạm (Clipboard) và kích hoạt mở Deep Link `https://zalo.me/{phone}` tức thời, không tốn phí SMS/ZNS.
+
 
 ---
 

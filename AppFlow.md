@@ -10,17 +10,15 @@ flowchart TD
     subgraph Landlord["PHÂN HỆ CHỦ TRỌ (Quản trị viên - Google Auth SDK)"]
         L_Auth["1. Đăng nhập Google"] --> L_Dash["2. Dashboard Công nợ"]
         L_Dash --> L_Rooms["Quản lý Danh mục Phòng & Đơn giá"]
-        L_Dash --> L_Bank["Cài đặt STK Ngân hàng (VietQR)"]
-        
-        L_Dash --> L_Record["3. Chốt chỉ số & Tải ảnh công tơ thực tế"]
-        L_Record --> L_GenBill["4. Tự động tính tiền & Xuất hóa đơn"]
+                L_Record["3. Chốt chỉ số & Tải ảnh công tơ thực tế"] --> L_GenBill["4. Tự động tính tiền & Xuất hóa đơn"]
+        L_GenBill --> L_Zalo["4b. Gửi hóa đơn 1-chạm qua Zalo (SĐT khách)"]
         
         L_DisputeView["6b. Xem ảnh đối chứng của khách"] --> L_Adjust["7. Điều chỉnh lại chỉ số nếu sai"]
         L_VerifyPay["9. Kiểm tra biến động số dư & Bấm duyệt"] --> L_Close["10. Khóa sổ (PAID) & Cập nhật Dashboard"]
     end
 
     subgraph Tenant["PHÂN HỆ NGƯỜI THUÊ (Link tra cứu bảo mật /bill/:token)"]
-        T_Link["Khách nhận Link / Mã QR qua Zalo"] --> T_View["5. Mở hóa đơn & Đối chiếu ảnh công tơ gốc"]
+        T_Link["Khách nhận Tin nhắn & Link tra cứu qua Zalo"] --> T_View["5. Mở hóa đơn & Đối chiếu ảnh công tơ gốc"]
         
         T_View -->|Phát hiện sai lệch| T_Dispute["6a. Báo sai lệch & Tải ảnh đối chứng"]
         T_View -->|Số liệu chuẩn xác| T_Confirm["Xác nhận đúng chỉ số"]
@@ -30,11 +28,11 @@ flowchart TD
     end
 
     %% Luồng tương tác đối soát hai chiều (Two-way Loop)
-    L_GenBill ==>|Gửi link hóa đơn qua Zalo| T_Link
-    T_Dispute ==>|Báo động khiếu nại DISPUTED| L_DisputeView
-    L_Adjust ==>|Tự động cập nhật lại hóa đơn| T_View
+    L_Zalo ==>|Mở zalo.me/{phone} & gửi link hóa đơn /bill/:token| T_Link
+    T_Dispute ==>|Báo động khiếu nại DISPUTED (Trạng thái 2)| L_DisputeView
+    L_Adjust ==>|Tự động cập nhật lại hóa đơn (Trạng thái 1)| T_View
     T_Pay ==>|Khách chuyển khoản trực tiếp| L_VerifyPay
-    L_Close ==>|Tự động đóng công nợ kỳ| T_Done
+    L_Close ==>|Tự động đóng công nợ kỳ (Trạng thái 3)| T_Done
 ```
 
 ---
@@ -80,7 +78,87 @@ flowchart TD
 4. Chủ trọ nhấn nút **"Chốt số & Tạo hóa đơn"**:
    - Hóa đơn lưu vào cơ sở dữ liệu với trạng thái `1` (Đã gửi hóa đơn - Chờ khách đối soát).
    - Hệ thống sinh mã Token bảo mật duy nhất cho hóa đơn.
-   - Hiển thị nút **"Sao chép link gửi Zalo"** hoặc **"Mã QR tra cứu"** để chủ trọ gửi cho khách thuê.
+   - Hiển thị hộp thoại chốt số thành công với lựa chọn **"Gửi Zalo cho khách"** hoặc **"Xem chi tiết hóa đơn"**.
+
+#### Flow L3.1: Quy trình Nghiệp vụ Gửi Hóa đơn qua Zalo theo Số điện thoại Khách thuê (Zalo Quick-Send)
+
+##### 1. Mục đích & Ý nghĩa nghiệp vụ
+- Khắc phục triệt để bất cập trong phương thức truyền thống: Chủ trọ phải copy từng số tiền, mở Zalo tìm tên khách, gõ tin nhắn thủ công dễ nhầm lẫn số liệu hoặc gửi nhầm phòng.
+- Tạo trải nghiệm **"1 Chạm - Tức thời - Không tốn phí"** (Zero SMS/ZNS fee), tận dụng nền tảng liên lạc phổ biến nhất Việt Nam (Zalo).
+- Đảm bảo tính pháp lý và đối soát: Tin nhắn gửi qua Zalo luôn kèm đường dẫn bảo mật `/bill/:token` dẫn trực tiếp đến ảnh chụp công tơ thực tế và mã VietQR chuẩn xác.
+
+##### 2. Sơ đồ tuần tự nghiệp vụ (Sequence Diagram)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Landlord as Chủ trọ (Quản lý)
+    participant UI as Giao diện Web Hệ thống
+    participant Clip as Bộ nhớ đệm (Clipboard API)
+    participant Zalo as Nền tảng Zalo (App / Web)
+    actor Tenant as Khách thuê trọ
+
+    Landlord->>UI: Bấm nút "Gửi Zalo" tại Thẻ phòng / Chi tiết Hóa đơn
+    activate UI
+    UI->>UI: 1. Đọc SĐT khách (tenantPhone) & Kiểm tra tính hợp lệ
+    alt SĐT trống hoặc không hợp lệ
+        UI-->>Landlord: Hiển thị cảnh báo: "Vui lòng cập nhật SĐT khách thuê!"
+    else SĐT hợp lệ
+        UI->>UI: 2. Chuẩn hóa định dạng SĐT (bỏ ký tự thừa, đưa về dạng số)
+        UI->>UI: 3. Tổng hợp nội dung tin nhắn hóa đơn chuẩn hóa
+        UI->>Clip: 4. Ghi tự động nội dung tin nhắn vào Clipboard
+        Clip-->>UI: Xác nhận sao chép thành công
+        UI-->>Landlord: Hiển thị Toast: "Đã sao chép hóa đơn! Đang mở Zalo..."
+        UI->>Zalo: 5. Kích hoạt Deep Link: https://zalo.me/{normalizedPhone}
+        deactivate UI
+        activate Zalo
+        Note over Zalo: Mở cửa sổ chat Zalo với đúng SĐT người thuê
+        Landlord->>Zalo: 6. Dán nội dung (Ctrl+V / Paste) và Bấm Gửi
+        Zalo-->>Tenant: 7. Tin nhắn xuất hiện trên màn hình điện thoại khách
+        deactivate Zalo
+        activate Tenant
+        Tenant->>UI: 8. Chạm vào link https://.../bill/:token trong tin nhắn Zalo
+        UI-->>Tenant: Mở màn hình Hóa đơn & Ảnh chụp công tơ gốc
+        deactivate Tenant
+    end
+```
+
+##### 3. Chi tiết các bước thực hiện trong luồng
+
+- **Bước 1: Tiền kiểm & Chuẩn hóa Số điện thoại người thuê (`tenantPhone`):**
+  - Hệ thống kiểm tra trường SĐT trong hồ sơ phòng.
+  - Chuẩn hóa: Loại bỏ khoảng trắng, dấu gạch ngang `.` `-`, loại bỏ tiền tố quốc tế `+84` hoặc `84` thành đầu số `0` tiêu chuẩn hoặc định dạng số nguyên thủy mà `zalo.me` hỗ trợ (`zalo.me/09xxxxxxxx`).
+  
+- **Bước 2: Tự động biên tập nội dung bản tin Hóa đơn chuẩn hóa:**
+  Mẫu tin nhắn được cấu trúc mạch lạc, trang trọng và minh bạch:
+  ```text
+  🏠 [NHÀ TRỌ 247] - THÔNG BÁO TIỀN PHÒNG KỲ THÁNG {thang}/{nam}
+  Kính gửi: Bạn {ten_khach} - {ten_phong}
+  
+  Chi tiết chi phí kỳ này:
+  1. Tiền phòng: {tien_phong} đ
+  2. Tiền điện ({so_dien_cu} -> {so_dien_moi} = {kwh} kWh): {tien_dien} đ
+  3. Tiền nước ({so_nuoc_cu} -> {so_nuoc_moi} = {m3} m³): {tien_nuoc} đ
+  4. Phí dịch vụ (Wifi, rác, vệ sinh): {tien_dich_vu} đ
+  👉 TỔNG CỘNG CẦN THANH TOÁN: {tong_tien} đ
+  
+  📸 Quý khách vui lòng bấm vào link bảo mật dưới đây để xem ẢNH CHỤP CÔNG TƠ THỰC TẾ và quét mã VIETQR thanh toán:
+  🔗 {url_hoa_don_bao_mat}
+  
+  (Vui lòng phản hồi xác nhận hoặc báo sai lệch chỉ số trên link trong vòng 24h. Trân trọng cảm ơn!)
+  ```
+
+- **Bước 3: Thực thi cơ chế 1-Chạm (Clipboard + Deep Link):**
+  - Sử dụng API `navigator.clipboard.writeText(messageTemplate)` để lưu trữ toàn bộ văn bản vào clipboard.
+  - Sử dụng lệnh điều hướng `window.open('https://zalo.me/' + cleanPhone, '_blank')`:
+    - Trên điện thoại: Tự động kích hoạt ứng dụng Zalo đã cài đặt, chuyển đến ngay màn hình chat với khách.
+    - Trên máy tính: Mở tab trình duyệt Zalo Web hoặc chuyển tiếp sang Zalo PC.
+  - Hiển thị Toast thông báo trạng thái: *"Đã sao chép nội dung hóa đơn! Đang mở cuộc trò chuyện Zalo với khách."*
+
+- **Bước 4: Xử lý các tình huống ngoại lệ & Kịch bản dự phòng (Fallbacks):**
+  - *Trường hợp phòng chưa có SĐT:* Hiển thị thông báo yêu cầu cập nhật SĐT, đồng thời cung cấp nút **"Sao chép nội dung & Link"** thủ công để chủ trọ có thể gửi qua ứng dụng khác (Messenger, Telegram, Viber).
+  - *Trường hợp khách chặn tin nhắn từ số lạ trên Zalo:* Do tin nhắn đã được lưu vào clipboard, chủ trọ có thể gửi yêu cầu kết bạn hoặc dán tin nhắn gửi qua SMS truyền thống ngay tức khắc.
+  - *Trường hợp trình duyệt chặn pop-up:* Hệ thống phát hiện và hiển thị hộp thoại chứa liên kết trực tiếp kèm nút **"Bấm vào đây để mở Zalo"**.
 
 #### Flow L4: Xử lý phản hồi sai lệch (Dispute Resolution)
 1. Khi người thuê bấm báo sai lệch, hóa đơn trên Dashboard của chủ trọ sẽ hiển thị nhãn đỏ **`2 - Khách khiếu nại`**.
