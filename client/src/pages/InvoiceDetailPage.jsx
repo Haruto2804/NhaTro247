@@ -83,10 +83,11 @@ export const InvoiceDetailPage = () => {
   // Gửi Zalo 1-chạm theo số điện thoại khách thuê
   const handleZaloSend = async () => {
     if (!invoice?.token) return;
+    const roomData = invoice.roomId || invoice.room || {};
     const res = await quickSendZalo({
-      phone: invoice.room?.tenantPhone,
-      roomName: `${invoice.room?.roomCode} - ${invoice.room?.name}`,
-      tenantName: invoice.room?.tenantName,
+      phone: roomData.tenantPhone,
+      roomName: `${roomData.roomCode || ''} - ${roomData.name || ''}`,
+      tenantName: roomData.tenantName,
       monthYear: invoice.monthYear,
       roomFee: invoice.roomFee,
       elecInfo: {
@@ -174,7 +175,8 @@ export const InvoiceDetailPage = () => {
     );
   }
 
-  const { room, readings } = invoice;
+  const room = invoice.roomId || invoice.room || {};
+  const readings = invoice.readings || {};
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
