@@ -30,6 +30,14 @@ const userSchema = new mongoose.Schema({
     accountNumber: { type: String, default: '' },  // Số tài khoản
     accountHolder: { type: String, default: '' },  // Tên chủ tài khoản
   },
+  zaloSession: {
+    connected: { type: Boolean, default: false },
+    zaloName: { type: String, default: '' },
+    zaloPhone: { type: String, default: '' },
+    zaloAvatar: { type: String, default: '' },
+    loginInfo: { type: Object, default: null },   // Lưu cookies, ime, userAgent
+    lastConnectedAt: { type: Date, default: null },
+  },
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

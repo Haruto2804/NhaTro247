@@ -51,6 +51,20 @@ export const InvoiceDetailPage = () => {
   const [copied, setCopied] = useState(false);
   const [paying, setPaying] = useState(false);
   const [zaloStatus, setZaloStatus] = useState('');
+  const [resendingZalo, setResendingZalo] = useState(false);
+
+  const handleAutoResendZalo = async () => {
+    try {
+      setResendingZalo(true);
+      const res = await api.post(`/invoices/${id}/resend-zalo`);
+      alert(res.data.message || 'Đã gửi qua Zalo thành công!');
+      await fetchInvoice();
+    } catch (err) {
+      alert('Lỗi gửi Zalo: ' + (err.response?.data?.message || err.message));
+    } finally {
+      setResendingZalo(false);
+    }
+  };
 
   const fetchInvoice = async () => {
     try {
@@ -225,11 +239,41 @@ export const InvoiceDetailPage = () => {
         </div>
       </div>
 
-      {/* Thông báo trạng thái gửi Zalo */}
+      {/* Thông báo trạng thái gửi Zalo thủ công */}
       {zaloStatus && (
         <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs flex items-center gap-2">
           <MessageCircle className="w-4 h-4 text-[#0068FF] shrink-0" />
           <span>{zaloStatus}</span>
+        </div>
+      )}
+
+      {/* Trạng thái gửi Zalo tự động từ Server */}
+      {invoice.zaloDelivery?.status === 'SENT' && (
+        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>
+              <b>Đã tự động gửi qua Zalo</b> tới khách thuê ({invoice.zaloDelivery.recipientPhone}) vào lúc{' '}
+              {new Date(invoice.zaloDelivery.sentAt).toLocaleString('vi-VN')}
+            </span>
+          </div>
+          <Button variant="outline" size="sm" loading={resendingZalo} onClick={handleAutoResendZalo} className="text-xs shrink-0 py-1 border-emerald-300 text-emerald-800 hover:bg-emerald-100">
+            Gửi lại qua Zalo
+          </Button>
+        </div>
+      )}
+
+      {invoice.zaloDelivery?.status === 'FAILED' && (
+        <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <MessageCircle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>
+              <b>Gửi Zalo tự động:</b> {invoice.zaloDelivery.error || 'Chưa thể gửi tự động. Vui lòng kiểm tra liên kết Zalo.'}
+            </span>
+          </div>
+          <Button size="sm" loading={resendingZalo} onClick={handleAutoResendZalo} className="text-xs shrink-0 py-1 bg-amber-600 hover:bg-amber-700 text-white font-medium">
+            Thử gửi lại
+          </Button>
         </div>
       )}
 

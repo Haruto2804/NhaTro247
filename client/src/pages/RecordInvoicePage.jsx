@@ -435,6 +435,16 @@ export const RecordInvoicePage = () => {
           </CardBody>
         </Card>
 
+        {/* Ghi chú tự động gửi Zalo */}
+        <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping"></span>
+            <span>
+              ⚡ <b>Tự động gửi Zalo:</b> Ngay khi bấm xuất hóa đơn, hệ thống sẽ tự động gửi bảng kê chi tiết và mã <b>VietQR</b> đến số điện thoại khách thuê <b>{selectedRoom?.tenantPhone || '...'}</b> (nếu đã kết nối Zalo trong Cài đặt).
+            </span>
+          </div>
+        </div>
+
         {/* Submit */}
         <div className="flex items-center justify-end gap-3 pt-2">
           <Button variant="outline" type="button" onClick={() => navigate('/dashboard')}>

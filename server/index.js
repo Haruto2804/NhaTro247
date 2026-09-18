@@ -9,6 +9,7 @@ const roomRoutes = require('./routes/roomRoutes');
 const invoiceRoutes = require('./routes/invoiceRoutes');
 const publicInvoiceRoutes = require('./routes/publicInvoiceRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const zaloRoutes = require('./routes/zaloRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -30,6 +31,7 @@ app.use('/api/rooms', roomRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/public/invoices', publicInvoiceRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/zalo', zaloRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

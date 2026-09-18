@@ -79,6 +79,16 @@ const invoiceSchema = new mongoose.Schema({
     resolvedAt: { type: Date, default: null },
     landlordResponse: { type: String, default: '' },
   },
+  zaloDelivery: {
+    status: {
+      type: String,
+      enum: ['NONE', 'PENDING', 'SENT', 'FAILED'],
+      default: 'NONE',
+    },
+    sentAt: { type: Date, default: null },
+    recipientPhone: { type: String, default: '' },
+    error: { type: String, default: '' },
+  },
 }, { timestamps: true });
 
 // Mỗi phòng chỉ có 1 hóa đơn cho 1 kỳ tháng

@@ -24,4 +24,7 @@ router.put('/:id/adjust', upload.fields([
 // Xác nhận đã nhận tiền & khóa sổ
 router.patch('/:id/paid', invoiceController.markAsPaid);
 
+// Gửi lại hóa đơn qua Zalo cá nhân
+router.post('/:id/resend-zalo', invoiceController.resendZalo);
+
 module.exports = router;

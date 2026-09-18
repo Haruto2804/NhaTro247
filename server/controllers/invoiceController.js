@@ -2,6 +2,7 @@ const { v4: uuidv4 } = require('uuid');
 const Invoice = require('../models/Invoice');
 const Room = require('../models/Room');
 const User = require('../models/User');
+const zaloPersonalService = require('../services/zaloPersonalService');
 
 // Helper sinh link VietQR QuickLink chuẩn NAPAS 247
 function generateVietQRUrl(bankingInfo, totalAmount, roomCode, monthYear) {
@@ -127,6 +128,38 @@ exports.createInvoice = async (req, res) => {
         paidAt: null,
       }
     });
+
+    // Tự động kích hoạt gửi hóa đơn qua Zalo cá nhân nếu chủ trọ đã liên kết
+    try {
+      const landlord = await User.findById(req.user._id);
+      if (landlord?.zaloSession?.connected) {
+        zaloPersonalService.sendInvoiceAuto({
+          landlordId: landlord._id,
+          recipientPhone: room.tenantPhone,
+          invoice,
+          room,
+          clientUrl: req.headers.origin || process.env.CLIENT_URL || 'http://localhost:5173',
+        }).then(async (result) => {
+          if (result.success) {
+            await Invoice.findByIdAndUpdate(invoice._id, {
+              'zaloDelivery.status': 'SENT',
+              'zaloDelivery.sentAt': new Date(),
+              'zaloDelivery.recipientPhone': room.tenantPhone,
+            });
+          } else {
+            await Invoice.findByIdAndUpdate(invoice._id, {
+              'zaloDelivery.status': 'FAILED',
+              'zaloDelivery.error': result.message || result.reason,
+              'zaloDelivery.recipientPhone': room.tenantPhone,
+            });
+          }
+        }).catch((err) => {
+          console.error('[ZALO AUTO BACKGROUND ERROR]', err);
+        });
+      }
+    } catch (zaloTriggerErr) {
+      console.error('[ZALO TRIGGER ERROR]', zaloTriggerErr);
+    }
 
     return res.status(201).json({
       message: 'Chốt số và xuất hóa đơn thành công!',
@@ -270,3 +303,49 @@ exports.markAsPaid = async (req, res) => {
     return res.status(500).json({ message: 'Lỗi máy chủ khi xác nhận thanh toán.' });
   }
 };
+
+// Gửi lại hóa đơn qua Zalo cá nhân
+exports.resendZalo = async (req, res) => {
+  try {
+    const invoice = await Invoice.findOne({ _id: req.params.id, landlordId: req.user._id }).populate('roomId');
+    if (!invoice) {
+      return res.status(404).json({ message: 'Không tìm thấy hóa đơn.' });
+    }
+
+    const room = invoice.roomId;
+    if (!room || !room.tenantPhone) {
+      return res.status(400).json({ message: 'Phòng này chưa có thông tin số điện thoại người thuê.' });
+    }
+
+    const result = await zaloPersonalService.sendInvoiceAuto({
+      landlordId: req.user._id,
+      recipientPhone: room.tenantPhone,
+      invoice,
+      room,
+      clientUrl: req.headers.origin || process.env.CLIENT_URL || 'http://localhost:5173',
+    });
+
+    if (result.success) {
+      invoice.zaloDelivery = {
+        status: 'SENT',
+        sentAt: new Date(),
+        recipientPhone: room.tenantPhone,
+        error: '',
+      };
+      await invoice.save();
+      return res.status(200).json({ message: `Đã gửi hóa đơn qua Zalo cho khách (${result.targetUser || room.tenantName}) thành công!`, invoice });
+    } else {
+      invoice.zaloDelivery = {
+        status: 'FAILED',
+        sentAt: null,
+        recipientPhone: room.tenantPhone,
+        error: result.message || result.reason,
+      };
+      await invoice.save();
+      return res.status(400).json({ message: result.message || 'Gửi Zalo không thành công.', invoice });
+    }
+  } catch (error) {
+    return res.status(500).json({ message: 'Lỗi khi gửi lại Zalo: ' + error.message });
+  }
+};
+

@@ -318,4 +318,44 @@ test('=== QA TEST SUITE: HỆ THỐNG NHÀ TRỌ 247 ===', async (t) => {
     assert.equal(data.stats.status3_paid, 1, 'Hóa đơn đã chốt thanh toán phải ghi nhận ở status3_paid = 1');
     assert.equal(data.stats.totalCollectedRevenue, 3382500, 'Doanh thu thực thu phải khớp với hóa đơn đã thanh toán (3,382,500đ)');
   });
+
+  // =========================================================================
+  // GIAI ĐOẠN 9: TỰ ĐỘNG HÓA ZALO CÁ NHÂN (ZALO PERSONAL API)
+  // =========================================================================
+  await t.test('9.1 Kiểm tra trạng thái liên kết Zalo cá nhân qua GET /zalo/status', async () => {
+    const res = await fetch(`${BASE_URL}/zalo/status`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.ok(typeof data.connected === 'boolean');
+  });
+
+  await t.test('9.2 Kiểm tra endpoint thăm dò trạng thái mã QR Zalo GET /zalo/qr/status', async () => {
+    const res = await fetch(`${BASE_URL}/zalo/qr/status`, {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    assert.equal(res.status, 200);
+    const data = await res.json();
+    assert.ok(data.status);
+  });
+
+  await t.test('9.3 Thử nghiệm hủy liên kết Zalo qua POST /zalo/disconnect', async () => {
+    const res = await fetch(`${BASE_URL}/zalo/disconnect`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    assert.equal(res.status, 200);
+  });
+
+  await t.test('9.4 Xử lý an toàn khi gửi lại Zalo khi chưa quét mã QR (Graceful Fallback)', async () => {
+    const res = await fetch(`${BASE_URL}/invoices/${invoiceId}/resend-zalo`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
+    // Trả về 400 kèm thông báo chủ trọ chưa liên kết Zalo cá nhân mà không làm crash server
+    assert.equal(res.status, 400);
+    const data = await res.json();
+    assert.match(data.message, /Zalo cá nhân/i);
+  });
 });
